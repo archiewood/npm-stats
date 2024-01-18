@@ -9,13 +9,13 @@ export const options = {
   package: {
     title: "NPM Package",
     description:
-      "Enter the name of the NPM package that you want to get stats from",
+      "Name of the NPM package that you want to get stats from",
     type: "string",
     required: true,
   },
   dateRange: {
     title: "Custom Date Range",
-    description: "Select the date range that you want to get stats from",
+    description: "Optionally specify a custom date range in format YYYY-MM-DD:YYYY-MM-DD",
     type: "string",
     required: false
   },
