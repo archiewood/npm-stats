@@ -8,9 +8,16 @@
     "test": "vitest --run",
     "check": "tsc --noEmit -p tsconfig.json"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "evidence",
+    "evidence-connector"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/archiewood/npm-stats.git"
+  },
+  "author": "Archie Sarre Wood",
+  "license": "MIT",
   "devDependencies": {
     "@evidence-dev/plugin-connector": "^2.0.4",
     "typescript": "^5.3.3",
