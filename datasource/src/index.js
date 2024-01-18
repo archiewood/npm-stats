@@ -1,62 +1,87 @@
-/**
- * This type describes the options that your connector expects to recieve
- * This could include username + password, host + port, etc
- * @typedef {Object} ConnectorOptions
- * @property {string} SomeOption
- */
+import { default as axios } from "axios";
 
 /**
- * @see https://docs.evidence.dev/plugins/creating-a-plugin/datasources#options-specification
- * @see https://github.com/evidence-dev/evidence/blob/main/packages/postgres/index.cjs#L316
+ * @typedef {Object} ConnectorOptions
+ * @property {string} package - The name of the NPM package that you want to get stats from
+ * @property {string} dateRange - (optional) A date range that you want to get stats from in the format of "YYYY-MM-DD:YYYY-MM-DD"
  */
 export const options = {
-  SomeOption: {
-    title: "Some Option",
+  package: {
+    title: "NPM Package",
     description:
-      "This object defines how SomeOption should be displayed and configured in the Settings UI",
+      "Enter the name of the NPM package that you want to get stats from",
+    type: "string",
+    required: true,
+  },
+  dateRange: {
+    title: "Custom Date Range",
+    description: "Select the date range that you want to get stats from",
+    type: "string",
+    required: false
   },
 };
 
-/**
- * Implementing this function creates a "simple" connector
- *
- * Each file in the source directory will be passed to this function, and it will return
- * either an array, or an async generator {@see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function*}
- * that contains the query results
- *
- * @see https://docs.evidence.dev/plugins/creating-a-plugin/datasources#simple-interface-arrays
- * @type {import("@evidence-dev/db-commons").GetRunner<ConnectorOptions>}
- */
-export const getRunner = (options) => {
-  console.debug(`SomeOption = ${options.SomeOption}`);
 
-  // This function will be called for EVERY file in the sources directory
-  // If you are expecting a specific file type (e.g. SQL files), make sure to filter
-  // to exclude others.
-
-  // If you are using some local database file (e.g. a sqlite or duckdb file)
-  // You may also need to filter that file out as well
-  return async (queryText, queryPath) => {
-    throw new Error("Query Runner has not yet been implemented");
-  };
+export const getRunner = () => {
+  // Hit the npm api to get the package stats
+  // https://api.npmjs.org/downloads/range/last-year/@evidence-dev/evidence
+  return () => Promise.resolve();
 };
 
+/** @type {import("@evidence-dev/db-commons").ProcessSource<ConnectorOptions>} */
+export async function* processSource(options, sourceFiles, utilFuncs) {
+  console.log(options);
 
-// Uncomment to use the advanced source interface
-// /** @type {import("@evidence-dev/db-commons").ProcessSource<ConnectorOptions>} */
-// export async function* processSource(options, sourceFiles, utilFuncs) {
-//     throw new Error("Process Source has not yet been implemented");
-// }
+  let today = new Date();
+  let dateRanges =[
+    {tableName: "last_day", value: "last-day", },
+    {tableName: "last_week", value: "last-week", },
+    {tableName: "last_month", value: "last-month", },
+    {tableName: "last_year", value: "last-year", },
+    {tableName: "max_range", value: "2005-01-01:" + today.toISOString().split('T')[0]}
+  ]
 
-/**
- * Implementing this function creates an "advanced" connector
- *
- *
- * @see https://docs.evidence.dev/plugins/creating-a-plugin/datasources#advanced-interface-generator-functions
- * @type {import("@evidence-dev/db-commons").GetRunner<ConnectorOptions>}
- */
+  if (options.dateRange) {
+    dateRanges.push({value: options.dateRange, tableName: "custom_date_range"});
+  } 
+
+  for (let dateRange of dateRanges) {
+    let apiUrl = `https://api.npmjs.org/downloads/range/${dateRange.value}/${options.package}`;
+
+    const response = await axios.get(apiUrl);
+    const downloads = response.data.downloads;
+
+    // map dates to JS Date objects
+    const rows = downloads.map((row) => {
+      return {
+        ...row,
+        day: new Date(row.day),
+      };
+    });
+
+    yield {
+      rows: rows,
+      columnTypes: [
+        {
+          name: "downloads",
+          evidenceType: "number",
+          typeFidelity: "inferred",
+        },
+        {
+          name: "day",
+          evidenceType: "date",
+          typeFidelity: "inferred",
+        },
+      ],
+      expectedRowCount: downloads.length,
+      name: dateRange.tableName,
+      content: JSON.stringify(options),
+    };
+  }
+}
+
 
 /** @type {import("@evidence-dev/db-commons").ConnectionTester<ConnectorOptions>} */
 export const testConnection = async (opts) => {
-  throw new Error("Connection test has not yet been implemented");
+  return true;
 };

@@ -48,7 +48,7 @@ datasources:
 
 4. Add the package name you want to track to the datasource settings.
 
-![Adding a package name](datasource/images/settings.png)
+![Adding a package name](images/settings.png)
 
 
 

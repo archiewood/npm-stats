@@ -1,133 +1,104 @@
----
-title: Welcome to Evidence
----
+# Evidence Open Source Usage Stats
 
-_Build polished data products with SQL and Markdown_
+This page contains usage statistics for the Evidence open source project.
 
-This demo [connects](/settings) to a local DuckDB file `needful_things.duckdb`.
+Evidence is distributed via [npm](https://www.npmjs.com/) under the package [@evidence-dev/evidence](https://www.npmjs.com/package/@evidence-dev/evidence).
 
-<LineChart
-  data={orders_by_month}
-  y=sales
-  yFmt=usd0k
-  title = "Sales by Month, USD"
+## Download Stats
+
+<BigValue
+  data={daily}
+  value=total_downloads
+  fmt="#,###"
+  title="Yesterday ({fmt(daily[0].day, 'D MMM')})"
+  comparison=growth_pct
+  comparisonTitle="vs. prior day"
 />
 
-## Write in Markdown
+<BigValue
+  data={weekly}
+  value=total_downloads
+  fmt="#,###"
+  title="Last Week (w/c {fmt(weekly[0].week, 'D MMM')})"
+  comparison=growth_pct
+  comparisonTitle="vs. prior week"
+/>
 
-Evidence renders markdown files into web pages. This page is:
-`[project]/pages/index.md`.
+<BigValue
+  data={monthly}
+  value=total_downloads
+  fmt="#,###"
+  title="Last Month ({fmt(monthly[0].month, 'MMM YY')})"
+  comparison=growth_pct
+  comparisonTitle="vs. prior month"
+/>
 
-## Run SQL using Code Fences
 
-```sql orders_by_month
-select
-  date_trunc('month', order_datetime) as order_month,
-  count(*) as number_of_orders,
-  sum(sales) as sales,
-  sum(sales)/count(*) as average_order_value
-from orders
-where order_datetime >= '2020-01-01'
-group by 1 order by 1 desc
+
+```yesterday
+select * from evidence_stats.last_day
 ```
 
-In your markdown file, you can include SQL queries in code fences. Evidence will run these queries through your database and return the results to the page.
-
-<Alert status=info>  
-To see the queries on a page, click the 3-dot menu at the top right of the page and Show Queries. You can see both the SQL and the query results by interacting with the query above.
-</Alert>
-
-## Visualize Data with Components
-
-### Value in Text
-
-Last month customers placed **<Value data={orders_by_month} column=number_of_orders/>** orders. The AOV was **<Value data={orders_by_month} column=average_order_value fmt=usd2/>**.
-
-### Big Value 
-<BigValue data={orders_by_month} value=sales fmt=usd0/>
-<BigValue data={orders_by_month} value=number_of_orders />
 
 
-### Bar Chart
-
-<BarChart 
-  data={orders_by_month} 
-  x=order_month
-  y=number_of_orders 
-  fillColor="#488f96"
->
-  <ReferenceArea xMin="2020-03-15" xMax="2021-05-15" label="COVID Impacted" color=red/>
-</BarChart>
-
-> **Try:** Change the chart to a `<LineChart>`.
-
-### Data Table
-
-<DataTable data={orders_by_month} rows=6/>
-
-> **More:** See [all components](https://docs.evidence.dev/components/all-components)
-
-## Add Interactive Features
-
-The latest version of Evidence includes features that allow you to easily create interactive data visualizations.
-
-### Chart with Filter 
-
-```sql categories
-select
-    category
-from orders
-group by category
-```
-
-<Dropdown data={categories} name=category value=category>
-    <DropdownOption value="%" valueLabel="All Categories"/>
-</Dropdown>
-
-<Dropdown name=year>
-    <DropdownOption value=% valueLabel="All Years"/>
-    <DropdownOption value=2019/>
-    <DropdownOption value=2020/>
-    <DropdownOption value=2021/>
-</Dropdown>
-
-```sql orders_by_category
+```daily
 select 
-    date_trunc('month', order_datetime) as month,
-    sum(sales) as sales_usd,
-    category
-from orders
-where category like '${inputs.category}'
-and date_part('year', order_datetime) like '${inputs.year}'
-group by all
-order by sales_usd desc
+  day,
+  downloads as total_downloads,
+  total_downloads / lag(total_downloads) over (order by day) -1 as growth_pct
+from evidence_stats.max_range
+where day <= strptime('${yesterday[0].day.toISOString()}', '%Y-%m-%dT%H:%M:%S.%fZ')
+order by day desc
 ```
 
-<BarChart
-    data={orders_by_category}
-    title="Sales by Month, {inputs.category}"
-    x=month
-    y=sales_usd
-    series=category
+
+
+```weekly
+select 
+  date_trunc('week', day) as week,
+  sum(downloads) as total_downloads,
+  total_downloads / lag(total_downloads) over (order by week) -1 as growth_pct
+from evidence_stats.max_range
+where week <= strptime('${yesterday[0].day.toISOString()}', '%Y-%m-%dT%H:%M:%S.%fZ') - interval '1 week'
+group by week
+order by week desc
+
+```
+
+```monthly
+select 
+  date_trunc('month', day) as month,
+  sum(downloads) as total_downloads,
+  total_downloads / lag(total_downloads) over (order by month) -1 as growth_pct
+from evidence_stats.max_range
+where month <= strptime('${yesterday[0].day.toISOString()}', '%Y-%m-%dT%H:%M:%S.%fZ') - interval '1 month'
+group by month
+order by month desc
+```
+
+
+
+## Download Charts
+
+<LineChart 
+  data={daily} 
+  y=total_downloads 
+  x=day 
+  title="Daily Package Downloads"
 />
 
+<LineChart 
+  data={weekly} 
+  y=total_downloads 
+  x=week
+  title="Weekly Package Downloads"
+/>
 
+<LineChart 
+  data={monthly} 
+  y=total_downloads
+  yFmt="#,###"
+  x=month
+  title="Monthly Package Downloads"
+/>
 
-
-# Share with Evidence Cloud
-
-Evidence Cloud is the easiest way to securely share your project. 
-
-- Get your project online
-- Authenticate users
-- Schedule data refreshes
-
-<BigLink href='https://du3tapwtcbi.typeform.com/waitlist?utm_source=template&typeform-source=template'>Deploy to Evidence Cloud &rarr;</BigLink>
-
-You can use Netlify, Vercel or another static hosting provider to [self-host Evidence](https://docs.evidence.dev/deployment/overview).
-
-# Get Support
-
-- Message us on [Slack](https://slack.evidence.dev/)
-- Read the [Docs](https://docs.evidence.dev/)
-- Open an issue on [Github](https://github.com/evidence-dev/evidence)

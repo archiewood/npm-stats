@@ -1,0 +1,5 @@
+# This file was automatically generated
+name: evidence_stats
+type: npm-stats
+options:
+  package: "@evidence-dev/evidence"
